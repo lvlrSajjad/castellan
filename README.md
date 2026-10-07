@@ -18,7 +18,7 @@ everyone.cannot('delete', WorkOrder, { status: 'invoiced' }).because('Invoiced w
 | [`@castellan/typeorm`](packages/typeorm) | Policy storage on your existing `DataSource`, `scopeQuery` (TypeORM `accessibleBy`), `toFindOptionsWhere`. |
 | [`@castellan/nestjs`](packages/nestjs) | `AuthzModule`, `AuthzGuard`, `@CheckAbility`, `@CurrentAbility`, `AuthzService`. |
 
-> **Status:** pre-release (0.x). Not yet published to npm.
+> **Status:** pre-release (0.x). Not on npm yet: install a tagged prerelease, see [docs/INSTALL.md](docs/INSTALL.md).
 
 ## Why
 
@@ -172,6 +172,85 @@ await authz.assignRole('u-42', 'site-manager', 'org-1');
 const ability = await authz.abilityFor(user, { domain: 'org-1' });
 ```
 
+## External grants mode (scoped RBAC)
+
+For apps that already own their access data (memberships, roles, assignments, a site tree) and
+want castellan only for **the rules, the decision and the list filter**, with Casbin as the
+engine. castellan reads the grants and never writes them.
+
+```ts
+import { Authz, createScopeTree, definePolicies, defineSubjects } from '@castellan/core';
+
+// Rules: a role is a key; composite roles inherit keys.
+export const policies = definePolicies<AppUser>(({ role, everyone }) => {
+  role('site.read').can('read', Site).can('read', WorkOrder);
+  role('work_order.update').can('update', WorkOrder, { status: { $ne: 'closed' } });
+  role('org.manager', ({ inherits }) => inherits('site.read', 'work_order.update'));
+  everyone.cannot('delete', WorkOrder, { status: 'invoiced' }); // global guardrail
+});
+
+// How each subject sits on the tree. Root columns only, so a scope never adds a join.
+export const subjects = defineSubjects({
+  Site: { tenant: 'orgId', leaf: 'id' },
+  WorkOrder: { tenant: 'orgId', leaf: 'siteId' },
+  Reading: { leaf: 'siteId' }, // no tenant column: tenant-wide means "all the tenant's leaves"
+});
+
+const authz = await Authz.create({ grants: 'snapshot', policies, subjects });
+
+// Per request, from the app's own (cached) access context:
+const ability = await authz.abilityFor(user, {
+  domain: 'org:812',
+  snapshot: {
+    tree: createScopeTree(nodes), // or any { contains(outer, inner), leaves(scope) }
+    roles: { 'custom:42': ['site.read'] }, // custom roles → keys
+    assignments: [
+      { role: 'org.manager', scope: 'group:north' },
+      { role: 'custom:42', scope: 'site:1001', validUntil: '2026-12-31T00:00:00Z' },
+      { role: 'org.manager', scope: 'org:812', limitTo: ['site.read'], source: 'delegation' },
+    ],
+  },
+});
+```
+
+Pass `grants: { load(user, domain) { … } }` instead of `'snapshot'` to have castellan load the
+snapshot itself.
+
+| Assignment scope `S` vs domain `D` | Allow rules are limited to |
+| --- | --- |
+| `S` contains `D` (`*`, partner, the tenant) | `tenant = D` (or `leaf IN leaves(D)` without a tenant column) |
+| `S` is inside `D` (group, site) | the above **and** `leaf IN leaves(S)` |
+| neither | nothing (the assignment is ignored) |
+
+- Type-level checks (`ability.can('update', WorkOrder)`) answer "is this held anywhere in `D`?".
+- Assignments outside `[validFrom, validUntil)` are ignored; `ability.expiresAt` is the next
+  instant the answer could change. `limitTo` intersects the role with a subset (delegation).
+- Unknown roles and keys are skipped and reported through `onGrantIssue`, never thrown.
+- Subjects missing from `defineSubjects` throw `ScopeMappingError`; leaf lists above
+  `maxScopeLeaves` (default 5 000) throw `ScopeTooLargeError`.
+- `grant`, `revoke`, `assignRole`, `syncPolicies` … throw `ReadOnlyError`.
+- `authz.enforce` / `assert` / `explain` run through an in-memory Casbin enforcer built for the
+  ability's grants; a scoped parity suite proves it agrees with `ability.can`.
+
+### List filters: resolve, check, apply
+
+```ts
+import { applyScope } from '@castellan/typeorm';
+
+const resolved = ability.resolveScope('read', WorkOrder);
+// { kind: 'none' } or { kind: 'condition', node } with every ref and scope resolved to literals:
+// { kind: 'and', nodes: [ { field: 'orgId', op: '$eq', value: 812 }, { field: 'siteId', op: '$in', value: [1001, 1002] } ] }
+if (resolved.kind === 'none') throw new NotFoundException();
+const rows = await applyScope(repo.createQueryBuilder('wo'), resolved).getMany();
+```
+
+In a scoped domain a resolved scope always carries the tenant (or leaf) predicate: it can never
+mean "all rows". Every consumer validates the scope first, so `undefined`, `null` or `{}` throw
+`InvalidScopeError` instead of becoming an unfiltered query. `applyScope` / `scopeQuery` options:
+`require: 'condition'` (throw `EmptyScopeError` instead of matching nothing) and
+`relations: false` (reject relation paths). See [decision 006](docs/decisions/006-external-grants-mode.md)
+and [007](docs/decisions/007-resolved-scopes.md).
+
 ## Concepts
 
 ### Roles, domains and principals
@@ -292,7 +371,11 @@ Two parity suites run in CI:
    from an RBAC/ABAC/deny/domain/field fixture must give the same answer in `ability.can()` and
    `enforcer.enforce()`.
 2. **ability vs SQL**: for every user × action, `scopeQuery` must return exactly the rows for
-   which `ability.can()` is true, on SQLite and Postgres.
+   which `ability.can()` is true, on SQLite, PostgreSQL and MySQL 8, with TypeORM 0.3 and 1.x.
+
+Both suites also run on a scoped fixture (platform, partner, tenant, group and site assignments,
+custom roles, validity windows, `limitTo`), including `IN` lists of 1 000 and 5 000 ids and an
+EXPLAIN check that scope columns use their indexes.
 
 ## Roadmap
 
@@ -309,7 +392,9 @@ pnpm install
 pnpm test          # all packages
 pnpm lint && pnpm typecheck
 pnpm build
-CASTELLAN_PG_URL=postgres://… pnpm --filter @castellan/typeorm test   # Postgres parity suite
+docker compose -f docker-compose.test.yml up -d
+CASTELLAN_PG_URL=postgres://postgres:castellan@localhost:55432/castellan pnpm --filter @castellan/typeorm test
+CASTELLAN_MYSQL_URL=mysql://root:castellan@localhost:53306/castellan pnpm --filter @castellan/typeorm test
 ```
 
 Design decisions are in [`docs/decisions`](docs/decisions).

@@ -31,3 +31,18 @@ export class ForbiddenError extends CastellanError {
     super(message);
   }
 }
+
+/** A scoped check used a subject type that has no entry in the subject map. */
+export class ScopeMappingError extends CastellanError {}
+
+/** A scope expands to more leaves than `maxScopeLeaves`; castellan refuses to truncate it. */
+export class ScopeTooLargeError extends CastellanError {}
+
+/** A write API was called in external grants mode, where the app owns access data. */
+export class ReadOnlyError extends CastellanError {}
+
+/** `require: 'condition'` was set and no rule grants access, so the scope is empty. */
+export class EmptyScopeError extends CastellanError {}
+
+/** A value passed as a resolved scope is not a valid `ResolvedScope`. */
+export class InvalidScopeError extends CastellanError {}

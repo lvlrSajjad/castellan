@@ -1,4 +1,4 @@
-export { Ability, type AbilityOptions, type Explanation, createAbility, rulesForPrincipals } from './ability.js';
+export { Ability, type AbilityOptions, type AbilityScope, type Explanation, createAbility, rulesForPrincipals } from './ability.js';
 export {
   Authz,
   type AuthzOptions,
@@ -40,10 +40,54 @@ export {
 export {
   CastellanError,
   ConditionError,
+  EmptyScopeError,
   ForbiddenError,
+  InvalidScopeError,
+  ReadOnlyError,
+  ScopeMappingError,
+  ScopeTooLargeError,
   SubjectTypeError,
   UnresolvedRefError,
 } from './errors.js';
+export {
+  type Assignment,
+  type GrantContext,
+  type GrantIssue,
+  type GrantSnapshot,
+  type GrantSource,
+  type ReachEntry,
+  buildGrantContext,
+  prepareExternalPolicies,
+} from './grants.js';
+export {
+  FALSE_NODE,
+  type ResolvedNode,
+  type ResolvedScope,
+  TRUE_NODE,
+  andNode,
+  assertResolvedScope,
+  fieldNode,
+  notNode,
+  orNode,
+  resolveConditions,
+  resolveScope,
+} from './resolve.js';
+export {
+  type LeafId,
+  ROOT_SCOPE,
+  type ScopeNode,
+  type ScopeTree,
+  type SubjectMap,
+  type SubjectMapOptions,
+  type SubjectScope,
+  createScopeTree,
+  defaultTenantValue,
+  defineSubjects,
+  leafSet,
+  requireSubjectScope,
+  scopeKey,
+} from './scope.js';
+export { buildScopedEnforcer, createScopeDomainMatcher, encodeScopedDomain } from './scoped-enforcer.js';
 export { lintRules } from './lint.js';
 export { type ModelOptions, buildModel, buildModelText, registerMatchers } from './model.js';
 export {
@@ -54,11 +98,13 @@ export {
   MANAGE,
   type PolicyRow,
   type RequestObject,
+  type RequestScope,
   type Rule,
   type RuleOrigin,
   actionMatches,
   compileCond,
   condMatches,
+  requestScopeMatches,
   rowToRule,
   ruleToRow,
   subjectMatches,

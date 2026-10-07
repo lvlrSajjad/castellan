@@ -19,10 +19,14 @@ export interface PolicySet {
   readonly warnings: readonly string[];
 }
 
-/** Returned by `can`/`cannot`; lets you attach a human-readable reason. */
-export interface RuleHandle {
-  /** Attaches a reason, surfaced by `relevantRuleFor()`, `assert()` and `ForbiddenError`. */
-  because(reason: string): RuleHandle;
+/** Returned by `can`/`cannot`: attach a reason, or chain more rules for the same principal. */
+export interface RuleHandle<A extends string = string> {
+  /** Attaches a reason to the rule(s) just defined, surfaced by `relevantRuleFor()`, `assert()` and `ForbiddenError`. */
+  because(reason: string): RuleHandle<A>;
+  /** Adds another allow rule for the same principal: `role('site.read').can('read', Site).can('read', WorkOrder)`. */
+  readonly can: DefineRule<A>;
+  /** Adds another deny rule for the same principal. */
+  readonly cannot: DefineRule<A>;
 }
 
 type Actions<A extends string> = A | typeof MANAGE | ReadonlyArray<A | typeof MANAGE>;
@@ -30,10 +34,10 @@ type Fields<T> = ReadonlyArray<Extract<keyof T, string>>;
 
 /** `can` / `cannot` signature, typed against the subject class. */
 export interface DefineRule<A extends string> {
-  <C extends AnyClass>(action: Actions<A>, subject: C, conditions?: Conditions<InstanceType<C>>, fields?: Fields<InstanceType<C>>): RuleHandle;
-  <C extends AnyClass>(action: Actions<A>, subject: C, fields: Fields<InstanceType<C>>, conditions?: Conditions<InstanceType<C>>): RuleHandle;
-  (action: Actions<A>, subject: string, conditions?: Conditions, fields?: readonly string[]): RuleHandle;
-  (action: Actions<A>, subject: string, fields: readonly string[], conditions?: Conditions): RuleHandle;
+  <C extends AnyClass>(action: Actions<A>, subject: C, conditions?: Conditions<InstanceType<C>>, fields?: Fields<InstanceType<C>>): RuleHandle<A>;
+  <C extends AnyClass>(action: Actions<A>, subject: C, fields: Fields<InstanceType<C>>, conditions?: Conditions<InstanceType<C>>): RuleHandle<A>;
+  (action: Actions<A>, subject: string, conditions?: Conditions, fields?: readonly string[]): RuleHandle<A>;
+  (action: Actions<A>, subject: string, fields: readonly string[], conditions?: Conditions): RuleHandle<A>;
 }
 
 /** Rule-writing API for one principal (a role, a user id, or everyone). */
@@ -91,25 +95,28 @@ export function definePolicies<U = Record<string, unknown>, A extends string = s
 
   const principalBuilder = (principal: string, domain: string): PrincipalBuilder<A> => {
     const defineRule = (effect: Effect) =>
-      ((action: Actions<A>, subjectType: AnyClass | string, third?: unknown, fourth?: unknown): RuleHandle => {
+      ((action: Actions<A>, subjectType: AnyClass | string, third?: unknown, fourth?: unknown): RuleHandle<A> => {
         const [conditions, fields] = Array.isArray(third) ? [fourth, third] : [third, fourth];
         const created = buildRules(principal, domain, effect, action, subjectType, conditions, fields as string[] | undefined);
         rules.push(...created);
-        const handle: RuleHandle = {
+        const handle: RuleHandle<A> = {
           because(reason) {
             for (const rule of created) rule.reason = reason;
             return handle;
           },
+          can: builder.can,
+          cannot: builder.cannot,
         };
         return handle;
       }) as DefineRule<A>;
-    return {
+    const builder: PrincipalBuilder<A> = {
       can: defineRule('allow'),
       cannot: defineRule('deny'),
       inherits: (...roles) => {
         for (const role of roles) roleLinks.push({ member: principal, role, domain });
       },
     };
+    return builder;
   };
 
   const role = ((name: string, second?: RoleOptions | ((b: PrincipalBuilder<A>) => void), third?: (b: PrincipalBuilder<A>) => void) => {

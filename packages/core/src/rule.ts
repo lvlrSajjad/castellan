@@ -140,6 +140,31 @@ export interface RequestObject {
   field?: string;
   /** Attributes of the user, used to resolve `$ref`s. */
   user: unknown;
+  /**
+   * Scope predicate for instance checks in a scoped domain: the instance must belong to the
+   * request's tenant (or, for subjects without a tenant column, to one of the domain's leaves).
+   * Applied to allow rules only.
+   */
+  scope?: RequestScope;
+}
+
+/** Built by castellan from the subject map; values are compared as strings. */
+export interface RequestScope {
+  tenant?: { field: string; value: string };
+  leaves?: { field: string; set: ReadonlySet<string> };
+}
+
+/** True when `data` satisfies the request's tenant / domain-leaf predicate. Nullish values never match. */
+export function requestScopeMatches(scope: RequestScope, data: object): boolean {
+  if (scope.tenant) {
+    const value = (data as Record<string, unknown>)[scope.tenant.field];
+    if (value === null || value === undefined || String(value) !== scope.tenant.value) return false;
+  }
+  if (scope.leaves) {
+    const value = (data as Record<string, unknown>)[scope.leaves.field];
+    if (value === null || value === undefined || !scope.leaves.set.has(String(value))) return false;
+  }
+  return true;
 }
 
 /** `actionMatch(r.act, p.act)` — `manage` matches every action. */
@@ -159,6 +184,7 @@ export function subjectMatches(requested: string, ruleSubject: string): boolean 
  * - Type-level checks (no `data`): conditional allow rules match, conditional deny rules do not (CASL semantics).
  * - Field rules: when no field is requested, allow rules match and deny rules do not (CASL semantics).
  * - Unresolved `$ref`: fail closed — allow rules do not match, deny rules do.
+ * - Scoped domains: allow rules only match instances inside the request's tenant ({@link RequestScope}).
  */
 export function condMatches(request: RequestObject, cond: CompiledCond, effect: Effect): boolean {
   if (cond.fields) {
@@ -167,6 +193,9 @@ export function condMatches(request: RequestObject, cond: CompiledCond, effect: 
     } else if (!cond.fields.includes(request.field)) {
       return false;
     }
+  }
+  if (effect === 'allow' && request.scope && request.data !== undefined && !requestScopeMatches(request.scope, request.data)) {
+    return false;
   }
   if (!cond.node) return true;
   if (request.data === undefined) return effect === 'allow';

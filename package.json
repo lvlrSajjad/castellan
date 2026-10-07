@@ -12,7 +12,8 @@
     "typecheck": "pnpm -r typecheck",
     "lint": "eslint .",
     "changeset": "changeset",
-    "release": "pnpm build && changeset publish"
+    "release": "pnpm build && changeset publish",
+    "pack:all": "rm -rf dist-packs && mkdir dist-packs && pnpm -r --filter './packages/*' exec pnpm pack --pack-destination ../../dist-packs"
   },
   "devDependencies": {
     "@changesets/cli": "^3.0.3",

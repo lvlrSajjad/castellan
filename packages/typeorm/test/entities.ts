@@ -1,8 +1,6 @@
 import 'reflect-metadata';
 import { Column, Entity, ManyToOne, PrimaryColumn } from 'typeorm';
-
-/** Set CASTELLAN_PG_URL to run the suite against Postgres instead of in-memory SQLite. */
-export const PG_URL = process.env.CASTELLAN_PG_URL;
+import { DATE_TYPE } from './db.js';
 
 @Entity('site')
 export class Site {
@@ -36,6 +34,6 @@ export class WorkOrder {
   @Column({ type: 'boolean', default: false })
   urgent!: boolean;
 
-  @Column({ type: PG_URL ? 'timestamptz' : 'datetime', nullable: true, name: 'due_at' })
+  @Column({ type: DATE_TYPE, nullable: true, name: 'due_at' })
   dueAt!: Date | null;
 }

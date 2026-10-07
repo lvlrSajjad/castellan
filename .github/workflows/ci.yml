@@ -3,6 +3,7 @@ name: CI
 on:
   push:
     branches: [main]
+    tags: ['v*']
   pull_request:
 
 jobs:
@@ -13,15 +14,6 @@ jobs:
       fail-fast: false
       matrix:
         node: [22, 24]
-    services:
-      postgres:
-        image: postgres:17-alpine
-        env:
-          POSTGRES_PASSWORD: castellan
-          POSTGRES_DB: castellan
-        ports: ['5432:5432']
-        options: >-
-          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -33,11 +25,49 @@ jobs:
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
-      - name: TypeORM parity suite on Postgres
+      - run: pnpm build
+
+  databases:
+    name: Parity on ${{ matrix.db }} (TypeORM ${{ matrix.typeorm }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        db: [postgres, mysql]
+        typeorm: ['1', '0.3']
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_PASSWORD: castellan
+          POSTGRES_DB: castellan
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: castellan
+          MYSQL_DATABASE: castellan
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1 -pcastellan" --health-interval 5s --health-timeout 5s --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Use TypeORM 0.3
+        if: matrix.typeorm == '0.3'
+        run: pnpm --filter @castellan/typeorm add -D typeorm@^0.3 better-sqlite3@^11
+      - name: Both parity suites (store-backed and scoped)
         run: pnpm --filter @castellan/typeorm test
         env:
-          CASTELLAN_PG_URL: postgres://postgres:castellan@localhost:5432/castellan
-      - run: pnpm build
+          CASTELLAN_PG_URL: ${{ matrix.db == 'postgres' && 'postgres://postgres:castellan@localhost:5432/castellan' || '' }}
+          CASTELLAN_MYSQL_URL: ${{ matrix.db == 'mysql' && 'mysql://root:castellan@127.0.0.1:3306/castellan' || '' }}
 
   compat:
     name: Compat (NestJS 10 + TypeORM 0.3)
@@ -56,3 +86,27 @@ jobs:
           pnpm --filter @castellan/nestjs add -D @nestjs/common@^10 @nestjs/core@^10 @nestjs/testing@^10 @nestjs/platform-express@^10 @nestjs/typeorm@^10 typeorm@^0.3 better-sqlite3@^11
       - run: pnpm --filter @castellan/typeorm --filter @castellan/nestjs test
       - run: pnpm --filter @castellan/typeorm --filter @castellan/nestjs typecheck
+
+  prerelease:
+    name: Pack prerelease tarballs
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [test, databases, compat]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: pnpm pack:all
+      - name: Attach tarballs to the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 || gh release create "$GITHUB_REF_NAME" --prerelease --title "$GITHUB_REF_NAME" --notes "Prerelease tarballs. See docs/INSTALL.md."
+          gh release upload "$GITHUB_REF_NAME" dist-packs/*.tgz --clobber

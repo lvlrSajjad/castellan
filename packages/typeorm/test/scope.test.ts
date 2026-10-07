@@ -1,9 +1,10 @@
 import 'reflect-metadata';
 import { Authz, definePolicies } from '@castellan/core';
-import { DataSource } from 'typeorm';
+import type { DataSource } from 'typeorm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { CastellanRule, createTypeormAdapter, scopeQuery, toFindOptionsWhere } from '../src/index.js';
-import { PG_URL, Site, WorkOrder } from './entities.js';
+import { createTestDataSource } from './db.js';
+import { Site, WorkOrder } from './entities.js';
 
 interface User {
   id: string;
@@ -38,10 +39,7 @@ let authz: Authz<User>;
 let all: WorkOrder[];
 
 beforeAll(async () => {
-  const entities = [Site, WorkOrder, CastellanRule];
-  ds = PG_URL
-    ? new DataSource({ type: 'postgres', url: PG_URL, entities, synchronize: true, dropSchema: true })
-    : new DataSource({ type: 'better-sqlite3', database: ':memory:', entities, synchronize: true });
+  ds = createTestDataSource([Site, WorkOrder, CastellanRule]);
   await ds.initialize();
   await ds.getRepository(Site).save([
     { id: 1, region: 'west' },

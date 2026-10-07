@@ -1,0 +1,17 @@
+# Local databases for the parity suites:
+#   docker compose -f docker-compose.test.yml up -d
+#   CASTELLAN_PG_URL=postgres://postgres:castellan@localhost:55432/castellan pnpm --filter @castellan/typeorm test
+#   CASTELLAN_MYSQL_URL=mysql://root:castellan@localhost:53306/castellan pnpm --filter @castellan/typeorm test
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_PASSWORD: castellan
+      POSTGRES_DB: castellan
+    ports: ['55432:5432']
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: castellan
+      MYSQL_DATABASE: castellan
+    ports: ['53306:3306']

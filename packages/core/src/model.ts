@@ -4,6 +4,11 @@ import { type RequestObject, actionMatches, compileCond, condMatches, ANY, subje
 export interface ModelOptions {
   /** Multi-tenant model with a domain field on requests, policies and role links. Default `true`. */
   domains?: boolean;
+  /**
+   * Domain matching for role links, `(requestDomain, linkDomain) => boolean`.
+   * Default: a link in domain `*` applies everywhere, otherwise domains must be equal.
+   */
+  domainMatcher?: (requestDomain: string, linkDomain: string) => boolean;
 }
 
 /**
@@ -45,7 +50,7 @@ export function buildModel(options?: ModelOptions): Model {
  * Registers castellan's matcher functions (`subjectMatch`, `actionMatch`, `condMatch`) and the
  * `*` domain wildcard for role links on an enforcer built from {@link buildModel}.
  */
-export async function registerMatchers(enforcer: Enforcer, { domains = true }: ModelOptions = {}): Promise<void> {
+export async function registerMatchers(enforcer: Enforcer, { domains = true, domainMatcher }: ModelOptions = {}): Promise<void> {
   await enforcer.addFunction('subjectMatch', ((obj: RequestObject, ruleSubject: string) =>
     subjectMatches(obj.type, ruleSubject)) as never);
   await enforcer.addFunction('actionMatch', ((act: string, ruleAction: string) =>
@@ -53,6 +58,9 @@ export async function registerMatchers(enforcer: Enforcer, { domains = true }: M
   await enforcer.addFunction('condMatch', ((obj: RequestObject, cond: string, eft: string) =>
     condMatches(obj, compileCond(cond), eft === 'deny' ? 'deny' : 'allow')) as never);
   if (domains) {
-    await enforcer.addNamedDomainMatchingFunc('g', (name: string, pattern: string) => pattern === ANY || name === pattern);
+    await enforcer.addNamedDomainMatchingFunc(
+      'g',
+      domainMatcher ?? ((name: string, pattern: string) => pattern === ANY || name === pattern),
+    );
   }
 }
