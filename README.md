@@ -1,4 +1,13 @@
-# castellan
+<h1 align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/logo-dark.svg">
+    <img src="docs/assets/logo-light.svg" alt="castellan" width="420">
+  </picture>
+</h1>
+
+<p align="center"><strong>Casbin is the engine. CASL is the API.</strong></p>
+
+<div align="center">
 
 [![CI](https://github.com/lvlrSajjad/castellan/actions/workflows/ci.yml/badge.svg)](https://github.com/lvlrSajjad/castellan/actions/workflows/ci.yml)
 [![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/lvlrSajjad/castellan/blob/main/LICENSE)
@@ -7,7 +16,7 @@
 [![npm (next)](https://img.shields.io/npm/v/@castellanjs/core/next?label=npm%40next)](https://www.npmjs.com/package/@castellanjs/core)
 [![downloads](https://img.shields.io/npm/dm/@castellanjs/core)](https://www.npmjs.com/package/@castellanjs/core)
 
-**Casbin is the engine. CASL is the API.**
+</div>
 
 castellan lets you write authorization rules with a typed, CASL-style DSL and enforces them with
 [Apache Casbin (incubating)](https://casbin.apache.org). You get RBAC with domains (multi-tenancy),
