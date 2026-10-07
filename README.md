@@ -1,5 +1,12 @@
 # castellan
 
+[![CI](https://github.com/lvlrSajjad/castellan/actions/workflows/ci.yml/badge.svg)](https://github.com/lvlrSajjad/castellan/actions/workflows/ci.yml)
+[![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/lvlrSajjad/castellan/blob/main/LICENSE)
+[![node](https://img.shields.io/node/v/@castellanjs/core)](https://nodejs.org)
+[![types: TypeScript](https://img.shields.io/badge/types-TypeScript-3178c6.svg)](https://www.typescriptlang.org)
+[![npm (next)](https://img.shields.io/npm/v/@castellanjs/core/next?label=npm%40next)](https://www.npmjs.com/package/@castellanjs/core)
+[![downloads](https://img.shields.io/npm/dm/@castellanjs/core)](https://www.npmjs.com/package/@castellanjs/core)
+
 **Casbin is the engine. CASL is the API.**
 
 castellan lets you write authorization rules with a typed, CASL-style DSL and enforces them with
@@ -12,11 +19,11 @@ role('technician').can('update', WorkOrder, { assigneeId: user.id, status: { $ne
 everyone.cannot('delete', WorkOrder, { status: 'invoiced' }).because('Invoiced work orders are immutable');
 ```
 
-| Package | What it does |
-| --- | --- |
-| [`@castellanjs/core`](packages/core) | DSL, condition engine, in-memory `Ability`, Casbin model + enforcer runtime, policy sync. No framework dependencies. |
-| [`@castellanjs/typeorm`](packages/typeorm) | Policy storage on your existing `DataSource`, `scopeQuery` (TypeORM `accessibleBy`), `toFindOptionsWhere`. |
-| [`@castellanjs/nestjs`](packages/nestjs) | `AuthzModule`, `AuthzGuard`, `@CheckAbility`, `@CurrentAbility`, `AuthzService`. |
+| Package | Version | What it does |
+| --- | --- | --- |
+| [`@castellanjs/core`](packages/core) | [![npm](https://img.shields.io/npm/v/@castellanjs/core/next?label=)](https://www.npmjs.com/package/@castellanjs/core) | DSL, condition engine, in-memory `Ability`, Casbin model + enforcer runtime, policy sync. No framework dependencies. |
+| [`@castellanjs/typeorm`](packages/typeorm) | [![npm](https://img.shields.io/npm/v/@castellanjs/typeorm/next?label=)](https://www.npmjs.com/package/@castellanjs/typeorm) | Policy storage on your existing `DataSource`, `scopeQuery` (TypeORM `accessibleBy`), `toFindOptionsWhere`. |
+| [`@castellanjs/nestjs`](packages/nestjs) | [![npm](https://img.shields.io/npm/v/@castellanjs/nestjs/next?label=)](https://www.npmjs.com/package/@castellanjs/nestjs) | `AuthzModule`, `AuthzGuard`, `@CheckAbility`, `@CurrentAbility`, `AuthzService`. |
 
 > **Status:** pre-release (0.x), published under the `next` dist-tag. See [docs/INSTALL.md](docs/INSTALL.md).
 
