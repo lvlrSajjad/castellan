@@ -1,9 +1,25 @@
 # Roadmap: external grants and scoped RBAC
 
-**Status:** in progress. Done in `0.1.0-alpha.0`: items 2, 3, 5 and 6, and the prerelease part of 10
-(the [minimum adoption path](#minimum-adoption-path)). Open questions are answered in
-[decision 006](../decisions/006-external-grants-mode.md); item 5 in [decision 007](../decisions/007-resolved-scopes.md).
-Not started: 1, 4, 7, 8, 9, `tenantField` for the store-backed mode, and the stable release.
+**Status:** in progress.
+
+- **Done in `0.1.0-alpha.1`:** items 2, 3, 5 and 6, and the prerelease part of 10 (the
+  [minimum adoption path](#minimum-adoption-path)). Open questions are answered in
+  [decision 006](../decisions/006-external-grants-mode.md); item 5 in [decision 007](../decisions/007-resolved-scopes.md).
+- **Done for `0.1.0-alpha.2`** ([decision 008](../decisions/008-scope-dags-sets-and-reach.md)):
+  - scope trees with several parents, and subjects linked to the tenant through a set of ids (item 3);
+  - MySQL 8.0 next to 8.4 in CI (item 6);
+  - most of item 7: `@RequirePermission`, `onNoDomainAccess`, `onDeniedInstance`,
+    `snapshotFromRequest` and `scopeFor()`;
+  - `ability.holds()` and `ability.permissions()` (part of item 8);
+  - `ability.covers()` (item 9);
+  - a benchmark, plus a faster scoped enforcer (part of item 4).
+- **Not started:**
+  - item 1 (the typed catalog);
+  - the versioned ability cache (item 4);
+  - `@CheckAbility.any` (item 7);
+  - the casbin-free entry point and `toJSON()` (item 8);
+  - `tenantField` for the store-backed mode;
+  - the stable release.
 
 ## Why
 

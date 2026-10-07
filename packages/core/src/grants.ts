@@ -1,7 +1,7 @@
 import { type PolicySet } from './builder.js';
 import { CastellanError } from './errors.js';
 import { ANY, type Rule } from './rule.js';
-import { type ScopeTree } from './scope.js';
+import { type LeafId, type ScopeTree } from './scope.js';
 
 /** One role assignment read from the app's tables: principal → role, at a scope. */
 export interface Assignment {
@@ -27,6 +27,11 @@ export interface GrantSnapshot {
   roles?: Readonly<Record<string, readonly string[]>>;
   /** The resource hierarchy for this domain. */
   tree: ScopeTree;
+  /**
+   * Named id lists for this domain, for subjects linked to the tenant through a set of ids
+   * (`defineSubjects({ Member: { tenant: { field: 'userId', in: 'members' } } })`).
+   */
+  lists?: Readonly<Record<string, readonly LeafId[]>>;
 }
 
 /** Reads grants from the app's own tables. castellan never writes them. */
@@ -41,6 +46,8 @@ export interface ReachEntry {
   scope: string;
   /** True when the assignment scope contains the domain (platform, partner, the tenant itself). */
   covers: boolean;
+  /** `source` labels of the assignments that grant the key at this scope (`'direct'` when unlabelled). */
+  sources: string[];
 }
 
 /** Something in a snapshot castellan skipped (never thrown at request time). */
@@ -77,7 +84,7 @@ export interface GrantContext {
 /**
  * Validates and indexes policies for external grants mode. Allowed rules: `role(...).can(...)`
  * (scoped by assignments) and `everyone.cannot(...)` (global guardrails). Rejected: `everyone.can`
- * (would be unscoped), role-level `cannot` (decision 009) and role domains other than `*`.
+ * (would be unscoped), role-level `cannot` (decision 006) and role domains other than `*`.
  */
 export function prepareExternalPolicies(sets: readonly PolicySet[]): ExternalPolicies {
   const rulesByPrincipal = new Map<string, Rule[]>();
@@ -136,6 +143,9 @@ export function buildGrantContext(
 ): GrantContext {
   if (!snapshot || !Array.isArray(snapshot.assignments) || !snapshot.tree) {
     throw new CastellanError('Invalid grant snapshot: expected { assignments, tree }');
+  }
+  if (snapshot.lists !== undefined && (snapshot.lists === null || typeof snapshot.lists !== 'object')) {
+    throw new CastellanError('Invalid grant snapshot: lists must be an object of id arrays');
   }
   const { tree } = snapshot;
   const custom = snapshot.roles ?? {};
@@ -216,9 +226,12 @@ export function buildGrantContext(
     } else {
       links.push([principal, role, scope]);
     }
+    const source = assignment.source || 'direct';
     for (const key of keys) {
       const entries = reach.get(key) ?? [];
-      if (!entries.some((e) => e.scope === scope)) entries.push({ scope, covers });
+      const entry = entries.find((e) => e.scope === scope);
+      if (!entry) entries.push({ scope, covers, sources: [source] });
+      else if (!entry.sources.includes(source)) entry.sources.push(source);
       reach.set(key, entries);
     }
   });

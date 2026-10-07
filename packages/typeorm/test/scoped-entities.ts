@@ -28,3 +28,10 @@ export class Reading {
   @Column({ type: 'integer', name: 'site_id', nullable: true, ...(DB === 'mysql' ? { unsigned: true } : {}) })
   siteId!: number | null;
 }
+
+/** Linked to the tenant through `snapshot.lists.members`; no leaf column. */
+@Entity('scoped_member')
+export class Member {
+  @PrimaryColumn({ type: 'integer' }) id!: number;
+  @Index() @Column({ type: 'varchar', length: 64, name: 'user_id', nullable: true }) userId!: string | null;
+}

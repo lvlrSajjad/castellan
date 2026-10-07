@@ -2,6 +2,8 @@
 export const AUTHZ_MODULE_OPTIONS = Symbol('castellan:module-options');
 /** Injection token for the core `Authz` instance. */
 export const AUTHZ_INSTANCE = Symbol('castellan:authz');
+/** Metadata key for `@RequirePermission` requirements. */
+export const REQUIRE_PERMISSION_METADATA = 'castellan:require-permission';
 /** Metadata key for `@CheckAbility` requirements. */
 export const CHECK_ABILITY_METADATA = 'castellan:check-ability';
 /** Request property where the guard stores the user's ability. */

@@ -5,10 +5,12 @@ import {
   type Explanation,
   ForbiddenError,
   type PolicySet,
+  type ResolvedScope,
   type Rule,
   type SubjectType,
   type SyncMode,
   type SyncReport,
+  resolveScope,
 } from '@castellanjs/core';
 import { Inject, Injectable } from '@nestjs/common';
 import { AUTHZ_INSTANCE, AUTHZ_MODULE_OPTIONS, REQUEST_ABILITY } from './constants.js';
@@ -27,7 +29,7 @@ export class AuthzService<U = any, A extends string = string> {
   ) {}
 
   /** Builds the in-memory ability for a user. */
-  abilityFor(user: U, options: Pick<CheckOptions, 'domain'> = {}): Promise<Ability<A>> {
+  abilityFor(user: U, options: Pick<CheckOptions, 'domain' | 'snapshot'> = {}): Promise<Ability<A>> {
     return this.authz.abilityFor(user, options);
   }
 
@@ -38,9 +40,18 @@ export class AuthzService<U = any, A extends string = string> {
   async abilityForRequest(request: any): Promise<Ability<A>> {
     if (request?.[REQUEST_ABILITY]) return request[REQUEST_ABILITY] as Ability<A>;
     const user = this.userFromRequest(request);
-    const ability = await this.abilityFor(user, { domain: this.domainFromRequest(request, user) });
+    const snapshot = await this.options.snapshotFromRequest?.(request, user);
+    const ability = await this.abilityFor(user, { domain: this.domainFromRequest(request, user), snapshot });
     if (request) request[REQUEST_ABILITY] = ability;
     return ability;
+  }
+
+  /**
+   * The validated row filter for `action` on a subject type in this request: `{ kind: 'none' }` or a
+   * condition for `applyScope` (`@castellanjs/typeorm`).
+   */
+  async scopeFor(request: any, action: A | 'manage', subject: SubjectType): Promise<ResolvedScope> {
+    return resolveScope(await this.abilityForRequest(request), action, subject);
   }
 
   /** Checks through the Casbin enforcer (source of truth). */
@@ -96,5 +107,10 @@ export class AuthzService<U = any, A extends string = string> {
   /** @internal */
   domainFromRequest(request: any, user: U): string | undefined {
     return this.options.domainFromRequest?.(request, user);
+  }
+
+  /** @internal */
+  get moduleOptions(): AuthzModuleOptions<U> {
+    return this.options;
   }
 }

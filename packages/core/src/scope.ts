@@ -20,8 +20,11 @@ export interface ScopeTree {
 /** One node of a {@link createScopeTree} input. */
 export interface ScopeNode {
   key: string;
-  /** Parent scope key. Omit (or `null`) for top-level nodes; they sit under `*`. */
-  parent?: string | null;
+  /**
+   * Parent scope key, or several when the node sits in more than one place (e.g. a site listed
+   * in two group trees). Omit (or `null`) for top-level nodes; they sit under `*`.
+   */
+  parent?: string | readonly string[] | null;
   /** Set on leaf nodes: the id stored in subjects' leaf column (e.g. the site id). */
   leaf?: LeafId;
 }
@@ -32,40 +35,56 @@ export function scopeKey(kind: string, id: string | number): string {
 }
 
 /**
- * Builds a {@link ScopeTree} from parent links. Leaf lists are computed once per scope and memoized.
+ * Builds a {@link ScopeTree} from parent links. A node may have several parents, so the tree can be
+ * a DAG (one site in several groups); `contains` follows every parent and `leaves` lists each leaf
+ * once. Leaf lists are computed once per scope and memoized.
+ *
+ * Every leaf under a tenant must belong to that tenant: subjects without a tenant column are scoped
+ * by leaf lists alone. Build the tree from the tenant's own leaves.
  *
  * @example
  * ```ts
  * const tree = createScopeTree([
  *   { key: 'org:812' },
  *   { key: 'group:north', parent: 'org:812' },
- *   { key: 'site:1001', parent: 'group:north', leaf: 1001 },
+ *   { key: 'group:fridges', parent: 'org:812' },
+ *   { key: 'site:1001', parent: ['group:north', 'group:fridges'], leaf: 1001 },
  * ]);
  * ```
  */
 export function createScopeTree(nodes: Iterable<ScopeNode>): ScopeTree {
-  const parent = new Map<string, string | null>();
+  const parents = new Map<string, readonly string[]>();
   const leafOf = new Map<string, LeafId>();
   const children = new Map<string, string[]>();
   for (const node of nodes) {
     if (!node.key || node.key === ROOT_SCOPE) throw new CastellanError(`Invalid scope key "${node.key}"`);
-    if (parent.has(node.key)) throw new CastellanError(`Duplicate scope key "${node.key}"`);
-    parent.set(node.key, node.parent ?? null);
+    if (parents.has(node.key)) {
+      throw new CastellanError(`Duplicate scope key "${node.key}"; list every parent of a node in one entry (parent: [...])`);
+    }
+    const list = node.parent === undefined || node.parent === null ? [] : typeof node.parent === 'string' ? [node.parent] : [...node.parent];
+    if (list.some((p) => !p || p === node.key)) throw new CastellanError(`Invalid parent of scope "${node.key}"`);
+    parents.set(node.key, list);
     if (node.leaf !== undefined && node.leaf !== null) leafOf.set(node.key, node.leaf);
   }
-  for (const [key, p] of parent) {
-    const list = children.get(p ?? ROOT_SCOPE) ?? [];
-    list.push(key);
-    children.set(p ?? ROOT_SCOPE, list);
+  for (const [key, list] of parents) {
+    for (const p of list.length ? list : [ROOT_SCOPE]) {
+      const kids = children.get(p) ?? [];
+      kids.push(key);
+      children.set(p, kids);
+    }
   }
   const leafCache = new Map<string, LeafId[]>();
 
   const contains = (outer: string, inner: string): boolean => {
     if (outer === ROOT_SCOPE || outer === inner) return true;
-    let current = parent.get(inner);
-    for (let depth = 0; current && depth < 64; depth++) {
+    const seen = new Set<string>([inner]);
+    const queue = [...(parents.get(inner) ?? [])];
+    while (queue.length) {
+      const current = queue.shift()!;
       if (current === outer) return true;
-      current = parent.get(current);
+      if (seen.has(current)) continue;
+      seen.add(current);
+      queue.push(...(parents.get(current) ?? []));
     }
     return false;
   };
@@ -92,10 +111,24 @@ export function createScopeTree(nodes: Iterable<ScopeNode>): ScopeTree {
   return { contains, leaves };
 }
 
+/**
+ * A tenant link through a set of ids: the row belongs to the tenant when `field` is in the snapshot
+ * list named `in` (e.g. the tenant's member ids or group ids).
+ */
+export interface TenantSet {
+  field: string;
+  /** Name of a list in `GrantSnapshot.lists`. */
+  in: string;
+}
+
 /** How one subject type maps onto the scope tree. */
 export interface SubjectScope {
-  /** Column holding the tenant id (compared with the request domain). Omit if the subject has none. */
-  tenant?: string;
+  /**
+   * How a row belongs to the tenant: a column compared with the request domain (`'orgId'`), or a
+   * column whose value must be in a per-domain list ({@link TenantSet}). Omit if the subject has
+   * neither; then tenant-wide means "all the domain's leaves".
+   */
+  tenant?: string | TenantSet;
   /** Column holding the leaf id (compared with `ScopeTree.leaves`). Required for sub-tenant scopes. */
   leaf?: string;
 }
@@ -132,6 +165,7 @@ export function defaultTenantValue(domain: string): LeafId {
  *   Site:      { tenant: 'orgId', leaf: 'id' },
  *   WorkOrder: { tenant: 'orgId', leaf: 'siteId' },
  *   Reading:   { leaf: 'siteId' },   // no tenant column
+ *   Member:    { tenant: { field: 'userId', in: 'members' } },  // snapshot.lists.members
  * });
  * ```
  */
@@ -141,10 +175,14 @@ export function defineSubjects(
 ): SubjectMap {
   for (const [type, scope] of Object.entries(subjects)) {
     if (!scope.tenant && !scope.leaf) throw new CastellanError(`Subject "${type}" needs a tenant or a leaf column`);
-    for (const column of [scope.tenant, scope.leaf]) {
+    const tenantColumn = typeof scope.tenant === 'object' ? scope.tenant.field : scope.tenant;
+    for (const column of [tenantColumn, scope.leaf]) {
       if (column !== undefined && !COLUMN.test(column)) {
         throw new CastellanError(`Invalid column "${column}" for subject "${type}" (root fields only)`);
       }
+    }
+    if (typeof scope.tenant === 'object' && (typeof scope.tenant.in !== 'string' || !scope.tenant.in)) {
+      throw new CastellanError(`Subject "${type}": tenant.in must name a snapshot list`);
     }
   }
   return { subjects: { ...subjects }, tenantValue: options.tenantValue ?? defaultTenantValue };
@@ -169,4 +207,24 @@ export function leafSet(tree: ScopeTree, scope: string, max: number): Set<string
     throw new ScopeTooLargeError(`Scope "${scope}" has ${leaves.length} leaves, more than maxScopeLeaves (${max})`);
   }
   return new Set(leaves.map(String));
+}
+
+/**
+ * Returns a snapshot list used by a {@link TenantSet}, enforcing `max`. A missing list throws
+ * {@link ScopeMappingError}: it is a wiring bug, never "no restriction".
+ */
+export function snapshotList(
+  lists: Readonly<Record<string, readonly LeafId[]>> | undefined,
+  name: string,
+  type: string,
+  max: number,
+): readonly LeafId[] {
+  const list = lists && Object.hasOwn(lists, name) ? lists[name] : undefined;
+  if (!Array.isArray(list)) {
+    throw new ScopeMappingError(`Subject "${type}" is scoped by list "${name}", but the grant snapshot has no such list`);
+  }
+  if (list.length > max) {
+    throw new ScopeTooLargeError(`List "${name}" has ${list.length} ids, more than maxScopeLeaves (${max})`);
+  }
+  return list;
 }

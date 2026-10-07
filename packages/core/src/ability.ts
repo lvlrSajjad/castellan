@@ -24,7 +24,7 @@ import {
   orNode,
   resolveConditions,
 } from './resolve.js';
-import { type ScopeTree, type SubjectMap, leafSet, requireSubjectScope } from './scope.js';
+import { type LeafId, type ScopeTree, type SubjectMap, leafSet, requireSubjectScope, snapshotList } from './scope.js';
 import { type AnyClass, type DetectSubjectType, type SubjectType, resolveSubject } from './subject.js';
 
 /** Result of {@link Ability.explain}. */
@@ -65,6 +65,28 @@ export interface AbilityScope {
   expiresAt?: number;
   /** Things skipped while building (unknown roles, …). */
   issues?: readonly GrantIssue[];
+  /** Named id lists for subjects linked to the tenant through a set (`GrantSnapshot.lists`). */
+  lists?: Readonly<Record<string, readonly LeafId[]>>;
+}
+
+/** One key (a role or a key it inherits) that reaches the domain, from {@link Ability.permissions}. */
+export interface PermissionReach {
+  key: string;
+  /** True when some assignment granting it covers the whole domain (tenant, partner, platform). */
+  tenantWide: boolean;
+  /** Scopes through which the key reaches the domain. */
+  scopes: string[];
+  /** `source` labels of the assignments that grant it. */
+  sources: string[];
+}
+
+/** Options for {@link Ability.covers}. */
+export interface CoversOptions {
+  /**
+   * Ignore grants that come only from these sources, e.g. `['delegation']` so that delegated
+   * access cannot be passed on.
+   */
+  excludeSources?: readonly string[];
 }
 
 const DEFAULT_MAX_SCOPE_LEAVES = 5_000;
@@ -92,6 +114,7 @@ export class Ability<A extends string = string> {
   private readonly compiled: CompiledRule[];
   private readonly detect?: DetectSubjectType;
   private readonly leafCache = new Map<string, Set<string>>();
+  private readonly listCache = new Map<string, Set<string>>();
 
   constructor(rules: readonly Rule[], options: AbilityOptions = {}) {
     this.rules = rules;
@@ -210,7 +233,10 @@ export class Ability<A extends string = string> {
   requestScope(type: string): RequestScope {
     const scope = this.scope!;
     const map = requireSubjectScope(scope.subjects, type);
-    if (map.tenant) return { tenant: { field: map.tenant, value: String(scope.subjects.tenantValue(scope.domain)) } };
+    if (typeof map.tenant === 'string') {
+      return { tenant: { field: map.tenant, value: String(scope.subjects.tenantValue(scope.domain)) } };
+    }
+    if (map.tenant) return { tenantIn: { field: map.tenant.field, set: this.listSet(map.tenant.in, type) } };
     return { leaves: { field: map.leaf!, set: this.leaves(scope.domain) } };
   }
 
@@ -219,15 +245,83 @@ export class Ability<A extends string = string> {
     const scope = this.scope;
     if (!scope) return TRUE_NODE;
     const map = requireSubjectScope(scope.subjects, type);
-    const tenant = map.tenant
-      ? fieldNode(map.tenant, '$eq', scope.subjects.tenantValue(scope.domain))
-      : fieldNode(map.leaf!, '$in', this.leafValues(scope.domain));
+    const tenant =
+      typeof map.tenant === 'string'
+        ? fieldNode(map.tenant, '$eq', scope.subjects.tenantValue(scope.domain))
+        : map.tenant
+          ? fieldNode(map.tenant.field, '$in', this.listValues(map.tenant.in, type))
+          : undefined;
     const entries = scope.reach?.get(rule.principal);
-    if (!scope.reach || entries?.some((e) => e.covers)) return tenant;
+    if (!scope.reach || entries?.some((e) => e.covers)) return tenant ?? fieldNode(map.leaf!, '$in', this.leafValues(scope.domain));
     if (!entries?.length || !map.leaf) return FALSE_NODE;
     const leaves = new Set<unknown>();
     for (const entry of entries) for (const id of this.leafValues(entry.scope)) leaves.add(id);
-    return andNode([tenant, fieldNode(map.leaf, '$in', [...leaves])]);
+    const inScope = fieldNode(map.leaf, '$in', [...leaves]);
+    // Without a tenant link, the scope's leaves are already a subset of the domain's leaves.
+    return tenant ? andNode([tenant, inScope]) : inScope;
+  }
+
+  /**
+   * True when the principal holds any of `keys` (roles, or keys they inherit) anywhere in the
+   * domain. Route guards use it: "may this user call this endpoint at all?". External grants mode only.
+   */
+  holds(keys: string | readonly string[]): boolean {
+    const reach = this.requireReach('holds');
+    return (typeof keys === 'string' ? [keys] : keys).some((key) => (reach.get(key)?.length ?? 0) > 0);
+  }
+
+  /**
+   * Every key that reaches the domain, with its scopes and sources, sorted by key. For a "who can
+   * do what" screen or a `/me` endpoint. External grants mode only.
+   */
+  permissions(): PermissionReach[] {
+    const reach = this.requireReach('permissions');
+    return [...reach.entries()]
+      .filter(([, entries]) => entries.length > 0)
+      .map(([key, entries]) => ({
+        key,
+        tenantWide: entries.some((e) => e.covers),
+        scopes: entries.map((e) => e.scope),
+        sources: [...new Set(entries.flatMap((e) => e.sources))],
+      }))
+      .sort((a, b) => (a.key < b.key ? -1 : a.key > b.key ? 1 : 0));
+  }
+
+  /**
+   * True when the principal holds **every** key at `scope` or above, for "you can only grant what
+   * you hold" checks before creating a role, an assignment or a delegation. `scope` must be the
+   * domain or inside it; anything else is false. External grants mode only.
+   */
+  covers(keys: readonly string[], scope: string, options: CoversOptions = {}): boolean {
+    const reach = this.requireReach('covers');
+    const tree = this.requireTree();
+    const domain = this.scope!.domain;
+    if (!tree.contains(domain, scope)) return false;
+    const excluded = new Set(options.excludeSources ?? []);
+    return keys.every((key) =>
+      (reach.get(key) ?? []).some(
+        (entry) =>
+          entry.sources.some((source) => !excluded.has(source)) && (entry.covers || tree.contains(entry.scope, scope)),
+      ),
+    );
+  }
+
+  private requireReach(method: string): ReadonlyMap<string, readonly ReachEntry[]> {
+    if (!this.scope?.reach) throw new CastellanError(`${method}() needs an ability built in external grants mode`);
+    return this.scope.reach;
+  }
+
+  private listValues(name: string, type: string): readonly LeafId[] {
+    return snapshotList(this.scope?.lists, name, type, this.scope?.maxScopeLeaves ?? DEFAULT_MAX_SCOPE_LEAVES);
+  }
+
+  private listSet(name: string, type: string): Set<string> {
+    let set = this.listCache.get(name);
+    if (!set) {
+      set = new Set(this.listValues(name, type).map(String));
+      this.listCache.set(name, set);
+    }
+    return set;
   }
 
   private leaves(scopeKey: string): Set<string> {

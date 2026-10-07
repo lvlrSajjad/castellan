@@ -28,6 +28,15 @@ export class Reading {
   }
 }
 
+/** Linked to the tenant through a set of ids (`snapshot.lists.members`); no leaf column. */
+export class Member {
+  id!: number;
+  userId!: string | null;
+  constructor(init: Partial<Member>) {
+    Object.assign(this, init);
+  }
+}
+
 /** Not in the subject map. */
 export class Unmapped {
   id!: number;
@@ -41,16 +50,18 @@ export interface User {
 //  ├─ partner:7
 //  │  ├─ org:812
 //  │  │  ├─ group:north ── site:1001, site:1002
-//  │  │  └─ group:south ── site:1003
+//  │  │  ├─ group:south ── site:1003
+//  │  │  └─ group:fridges ── site:1001, site:1003   (a second tree: sites with two parents)
 //  │  └─ org:900 ── site:2001
 export const tree = createScopeTree([
   { key: 'partner:7' },
   { key: 'org:812', parent: 'partner:7' },
   { key: 'group:north', parent: 'org:812' },
   { key: 'group:south', parent: 'org:812' },
-  { key: 'site:1001', parent: 'group:north', leaf: 1001 },
+  { key: 'group:fridges', parent: 'org:812' },
+  { key: 'site:1001', parent: ['group:north', 'group:fridges'], leaf: 1001 },
   { key: 'site:1002', parent: 'group:north', leaf: 1002 },
-  { key: 'site:1003', parent: 'group:south', leaf: 1003 },
+  { key: 'site:1003', parent: ['group:south', 'group:fridges'], leaf: 1003 },
   { key: 'org:900', parent: 'partner:7' },
   { key: 'site:2001', parent: 'org:900', leaf: 2001 },
 ]);
@@ -59,10 +70,17 @@ export const subjects = defineSubjects({
   Site: { tenant: 'orgId', leaf: 'id' },
   WorkOrder: { tenant: 'orgId', leaf: 'siteId' },
   Reading: { leaf: 'siteId' },
+  Member: { tenant: { field: 'userId', in: 'members' } },
 });
 
+/** Per-domain lists for set-linked subjects. */
+export const lists: Record<string, Record<string, string[]>> = {
+  'org:812': { members: ['alice', 'bob'] },
+  'org:900': { members: ['carol'] },
+};
+
 export const policies = definePolicies<User>(({ role, everyone, user }) => {
-  role('site.read').can('read', Site).can('read', WorkOrder).can('read', Reading);
+  role('site.read').can('read', Site).can('read', WorkOrder).can('read', Reading).can('read', Member);
   role('work_order.update').can('update', WorkOrder, { status: { $ne: 'closed' } });
   role('work_order.update_own').can('update', WorkOrder, { assigneeId: user.id });
   role('site.manage').can(['update', 'delete'], Site);
@@ -79,6 +97,7 @@ const grants: Record<string, { assignments: Assignment[]; roles?: Record<string,
   partner: { assignments: [{ role: 'org.manager', scope: 'partner:7', source: 'partner' }] },
   tenant: { assignments: [{ role: 'org.manager', scope: 'org:812' }] },
   group: { assignments: [{ role: 'org.manager', scope: 'group:north' }] },
+  fridges: { assignments: [{ role: 'site.read', scope: 'group:fridges' }] },
   site: {
     assignments: [
       { role: 'site.read', scope: 'site:1003' },
@@ -109,9 +128,9 @@ const grants: Record<string, { assignments: Assignment[]; roles?: Record<string,
 
 export const userIds = Object.keys(grants);
 
-export function snapshotFor(userId: string): GrantSnapshot {
+export function snapshotFor(userId: string, domain = 'org:812'): GrantSnapshot {
   const g = grants[userId]!;
-  return { assignments: g.assignments, roles: g.roles, tree };
+  return { assignments: g.assignments, roles: g.roles, tree, lists: lists[domain] };
 }
 
 export const instances: object[] = [
@@ -129,8 +148,11 @@ export const instances: object[] = [
   new Reading({ id: 2, siteId: 1003 }),
   new Reading({ id: 3, siteId: 2001 }),
   new Reading({ id: 4, siteId: null }),
+  new Member({ id: 1, userId: 'alice' }),
+  new Member({ id: 2, userId: 'carol' }),
+  new Member({ id: 3, userId: null }),
 ];
 
-export const types = [Site, WorkOrder, Reading];
+export const types = [Site, WorkOrder, Reading, Member];
 export const actions = ['read', 'update', 'delete', 'manage', 'approve'] as const;
 export const domains = ['org:812', 'org:900'];

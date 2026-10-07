@@ -28,13 +28,19 @@ jobs:
       - run: pnpm build
 
   databases:
-    name: Parity on ${{ matrix.db }} (TypeORM ${{ matrix.typeorm }})
+    name: Parity on ${{ matrix.db }}${{ matrix.db == 'mysql' && format(' {0}', matrix.mysql) || '' }} (TypeORM ${{ matrix.typeorm }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         db: [postgres, mysql]
         typeorm: ['1', '0.3']
+        mysql: ['8.4']
+        include:
+          # MySQL 8.0 (and engines compatible with it), on the current TypeORM only.
+          - db: mysql
+            typeorm: '1'
+            mysql: '8.0'
     services:
       postgres:
         image: postgres:17-alpine
@@ -45,7 +51,7 @@ jobs:
         options: >-
           --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
       mysql:
-        image: mysql:8.4
+        image: mysql:${{ matrix.mysql }}
         env:
           MYSQL_ROOT_PASSWORD: castellan
           MYSQL_DATABASE: castellan

@@ -405,6 +405,7 @@ export class Authz<U = unknown, A extends string = string> {
         maxScopeLeaves: this.options.maxScopeLeaves,
         expiresAt: context.expiresAt,
         issues: context.issues,
+        lists: snapshot.lists,
       },
     });
     this.scoped.set(ability, { context, snapshot });

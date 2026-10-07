@@ -21,3 +21,15 @@ export class AuthzForbiddenException extends ForbiddenException {
     });
   }
 }
+
+/** 403 raised by `@RequirePermission` when the user holds none of the keys in the request domain. */
+export class PermissionRequiredException extends ForbiddenException {
+  constructor(readonly permissions: readonly string[]) {
+    super({
+      statusCode: 403,
+      error: 'Forbidden',
+      message: `Missing permission: ${permissions.join(' or ')}`,
+      permissions: [...permissions],
+    });
+  }
+}

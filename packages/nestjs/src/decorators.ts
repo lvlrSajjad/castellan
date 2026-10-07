@@ -1,7 +1,7 @@
 import type { SubjectType } from '@castellanjs/core';
 import { type ExecutionContext, createParamDecorator } from '@nestjs/common';
 import type { ModuleRef } from '@nestjs/core';
-import { CHECK_ABILITY_METADATA, REQUEST_ABILITY } from './constants.js';
+import { CHECK_ABILITY_METADATA, REQUEST_ABILITY, REQUIRE_PERMISSION_METADATA } from './constants.js';
 import { getRequest } from './request.js';
 
 export interface CheckAbilityOptions {
@@ -37,6 +37,30 @@ export function CheckAbility(action: string, subject: SubjectType, options: Chec
     const holder = descriptor ? (descriptor.value as object) : target;
     const existing: AbilityRequirement[] = Reflect.getMetadata(CHECK_ABILITY_METADATA, holder) ?? [];
     Reflect.defineMetadata(CHECK_ABILITY_METADATA, [{ action, subject, options }, ...existing], holder);
+  };
+}
+
+/**
+ * External grants mode: the user must hold **any one** of `keys` (roles, or keys they inherit)
+ * anywhere in the request domain. Stack several to require all of them. Works on controllers and
+ * methods. Answers 403 with the missing keys, or 404 for users with no access to the domain when
+ * `onNoDomainAccess: 'not-found'` is set.
+ *
+ * @example
+ * ```ts
+ * @Get()
+ * @RequirePermission('site.read', 'site.manage')
+ * list() {}
+ * ```
+ */
+export function RequirePermission(...keys: string[]): ClassDecorator & MethodDecorator {
+  if (keys.length === 0 || keys.some((k) => typeof k !== 'string' || !k)) {
+    throw new Error('@RequirePermission needs at least one non-empty key');
+  }
+  return (target: object, _key?: string | symbol, descriptor?: PropertyDescriptor) => {
+    const holder = descriptor ? (descriptor.value as object) : target;
+    const existing: string[][] = Reflect.getMetadata(REQUIRE_PERMISSION_METADATA, holder) ?? [];
+    Reflect.defineMetadata(REQUIRE_PERMISSION_METADATA, [[...keys], ...existing], holder);
   };
 }
 

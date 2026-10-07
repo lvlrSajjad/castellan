@@ -150,7 +150,11 @@ export interface RequestObject {
 
 /** Built by castellan from the subject map; values are compared as strings. */
 export interface RequestScope {
+  /** The tenant column equals the domain's tenant value. */
   tenant?: { field: string; value: string };
+  /** The tenant link column is in a per-domain list (`tenant: { field, in }`). */
+  tenantIn?: { field: string; set: ReadonlySet<string> };
+  /** No tenant link: the leaf column is one of the domain's leaves. */
   leaves?: { field: string; set: ReadonlySet<string> };
 }
 
@@ -160,9 +164,10 @@ export function requestScopeMatches(scope: RequestScope, data: object): boolean 
     const value = (data as Record<string, unknown>)[scope.tenant.field];
     if (value === null || value === undefined || String(value) !== scope.tenant.value) return false;
   }
-  if (scope.leaves) {
-    const value = (data as Record<string, unknown>)[scope.leaves.field];
-    if (value === null || value === undefined || !scope.leaves.set.has(String(value))) return false;
+  for (const member of [scope.tenantIn, scope.leaves]) {
+    if (!member) continue;
+    const value = (data as Record<string, unknown>)[member.field];
+    if (value === null || value === undefined || !member.set.has(String(value))) return false;
   }
   return true;
 }

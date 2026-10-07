@@ -36,7 +36,7 @@ export function buildModelText({ domains = true }: ModelOptions = {}): string {
     'e = some(where (p.eft == allow)) && !some(where (p.eft == deny))',
     '',
     '[matchers]',
-    `m = (p.sub == "${ANY}" || g(r.sub, p.sub${gDom}))${domMatch} && subjectMatch(r.obj, p.obj) && actionMatch(r.act, p.act) && condMatch(r.obj, p.cond, p.eft)`,
+    `m = actionMatch(r.act, p.act) && subjectMatch(r.obj, p.obj)${domMatch} && (p.sub == "${ANY}" || g(r.sub, p.sub${gDom})) && condMatch(r.obj, p.cond, p.eft)`,
     '',
   ].join('\n');
 }

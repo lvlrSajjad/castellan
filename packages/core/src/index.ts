@@ -1,4 +1,13 @@
-export { Ability, type AbilityOptions, type AbilityScope, type Explanation, createAbility, rulesForPrincipals } from './ability.js';
+export {
+  Ability,
+  type AbilityOptions,
+  type AbilityScope,
+  type CoversOptions,
+  type Explanation,
+  type PermissionReach,
+  createAbility,
+  rulesForPrincipals,
+} from './ability.js';
 export {
   Authz,
   type AuthzOptions,
@@ -80,14 +89,16 @@ export {
   type SubjectMap,
   type SubjectMapOptions,
   type SubjectScope,
+  type TenantSet,
   createScopeTree,
   defaultTenantValue,
   defineSubjects,
   leafSet,
   requireSubjectScope,
   scopeKey,
+  snapshotList,
 } from './scope.js';
-export { buildScopedEnforcer, createScopeDomainMatcher, encodeScopedDomain } from './scoped-enforcer.js';
+export { ScopedRoleManager, buildScopedEnforcer, createScopeDomainMatcher, encodeScopedDomain } from './scoped-enforcer.js';
 export { lintRules } from './lint.js';
 export { type ModelOptions, buildModel, buildModelText, registerMatchers } from './model.js';
 export {

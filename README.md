@@ -235,7 +235,7 @@ snapshot itself.
 | Assignment scope `S` vs domain `D` | Allow rules are limited to |
 | --- | --- |
 | `S` contains `D` (`*`, partner, the tenant) | `tenant = D` (or `leaf IN leaves(D)` without a tenant column) |
-| `S` is inside `D` (group, site) | the above **and** `leaf IN leaves(S)` |
+| `S` is inside `D` (group, site) | `tenant = D` **and** `leaf IN leaves(S)` (just `leaf IN leaves(S)` without a tenant column) |
 | neither | nothing (the assignment is ignored) |
 
 - Type-level checks (`ability.can('update', WorkOrder)`) answer "is this held anywhere in `D`?".
@@ -247,6 +247,50 @@ snapshot itself.
 - `grant`, `revoke`, `assignRole`, `syncPolicies` … throw `ReadOnlyError`.
 - `authz.enforce` / `assert` / `explain` run through an in-memory Casbin enforcer built for the
   ability's grants; a scoped parity suite proves it agrees with `ability.can`.
+
+**Trees with several parents.** A node may list several parents, e.g. a site that appears in two
+group trees: `{ key: 'site:1001', parent: ['group:north', 'group:fridges'], leaf: 1001 }`. Every
+leaf under a tenant must belong to that tenant, so build the tree from the tenant's own leaves.
+
+**Subjects linked to the tenant through a set of ids.** For tables with no tenant column and no
+leaf column, such as rows keyed by member or by group, name a per-domain list:
+
+```ts
+defineSubjects({ Member: { tenant: { field: 'userId', in: 'members' } } });
+// snapshot: { …, lists: { members: [17, 23, 42] } }  →  userId IN (17, 23, 42)
+```
+
+They have no leaf, so only assignments that cover the whole domain reach them. A missing list
+throws `ScopeMappingError`; it never means "no restriction".
+
+**Who holds what.**
+
+```ts
+ability.holds(['site.read', 'site.manage']);   // any of them, anywhere in the domain (route guards)
+ability.permissions();                          // [{ key, tenantWide, scopes, sources }] for /me screens
+ability.covers(role.keys, 'group:north', { excludeSources: ['delegation'] });
+// every key at that scope or above: "you can only grant what you hold", without passing on delegations
+```
+
+**NestJS.** `AuthzModule` takes the same options, plus:
+
+```ts
+AuthzModule.forRoot({
+  grants: 'snapshot', policies, subjects,
+  domainFromRequest: (req) => `org:${req.params.orgId}`,          // tenant in the path
+  snapshotFromRequest: (req) => req.accessContext.snapshot,        // built by an earlier guard
+  onNoDomainAccess: 'not-found',  // nothing reaches the domain → 404, not 403
+  onDeniedInstance: 'not-found',  // a loaded row outside the scope → 404, not 403
+});
+
+@Get() @RequirePermission('site.read', 'site.manage')   // any of them; stack decorators for "all of"
+list(@Req() req) { return this.authz.scopeFor(req, 'read', Site); }   // a validated ResolvedScope
+```
+
+**Cost** (1 000 sites in two trees, 60 keys, 50 assignments; `pnpm --filter @castellanjs/core bench`):
+building an ability from a snapshot and resolving a list filter takes about 0.1 ms; `ability.can`
+about 1 µs; a check through the scoped Casbin enforcer 0.5–0.9 ms (1 ms when the enforcer is built
+cold). Use the ability for lists and in loops, and `authz.assert` where you want Casbin to decide.
 
 ### List filters: resolve, check, apply
 
@@ -371,7 +415,7 @@ Pass a Casbin watcher (e.g. a Redis watcher) as `watcher` so other instances rel
   [policy_effect]
   e = some(where (p.eft == allow)) && !some(where (p.eft == deny))
   [matchers]
-  m = (p.sub == "*" || g(r.sub, p.sub, r.dom)) && (p.dom == "*" || r.dom == p.dom) && subjectMatch(r.obj, p.obj) && actionMatch(r.act, p.act) && condMatch(r.obj, p.cond, p.eft)
+  m = actionMatch(r.act, p.act) && subjectMatch(r.obj, p.obj) && (p.dom == "*" || r.dom == p.dom) && (p.sub == "*" || g(r.sub, p.sub, r.dom)) && condMatch(r.obj, p.cond, p.eft)
   ```
 
 - `p.cond` is JSON, evaluated by the registered `condMatch` function instead of `eval()`.
@@ -387,11 +431,13 @@ Two parity suites run in CI:
    from an RBAC/ABAC/deny/domain/field fixture must give the same answer in `ability.can()` and
    `enforcer.enforce()`.
 2. **ability vs SQL**: for every user × action, `scopeQuery` must return exactly the rows for
-   which `ability.can()` is true, on SQLite, PostgreSQL and MySQL 8, with TypeORM 0.3 and 1.x.
+   which `ability.can()` is true, on SQLite, PostgreSQL 17 and MySQL 8.0 and 8.4, with TypeORM 0.3
+   and 1.x.
 
 Both suites also run on a scoped fixture (platform, partner, tenant, group and site assignments,
-custom roles, validity windows, `limitTo`), including `IN` lists of 1 000 and 5 000 ids and an
-EXPLAIN check that scope columns use their indexes.
+sites with two parents, subjects linked through a set of ids, custom roles, validity windows,
+`limitTo`), including `IN` lists of 1 000 and 5 000 ids and an EXPLAIN check that scope columns use
+their indexes.
 
 ## Roadmap
 

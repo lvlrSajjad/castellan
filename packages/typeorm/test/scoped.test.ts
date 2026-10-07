@@ -15,19 +15,25 @@ import {
 import { applyScope, scopeQuery, toFindOptionsWhere } from '../src/index.js';
 import { DB, createTestDataSource } from './db.js';
 import { explainScope } from './explain.js';
-import { Reading, Site, WorkOrder } from './scoped-entities.js';
+import { Member, Reading, Site, WorkOrder } from './scoped-entities.js';
 
 let ds: DataSource;
 let authz: Authz<User>;
-const rows: { Site: Site[]; WorkOrder: WorkOrder[]; Reading: Reading[] } = { Site: [], WorkOrder: [], Reading: [] };
-const entities = { Site, WorkOrder, Reading };
+const rows: { Site: Site[]; WorkOrder: WorkOrder[]; Reading: Reading[]; Member: Member[] } = {
+  Site: [],
+  WorkOrder: [],
+  Reading: [],
+  Member: [],
+};
+const entities = { Site, WorkOrder, Reading, Member };
+const names = ['Site', 'WorkOrder', 'Reading', 'Member'] as const;
 
 // Leaf ids used by the fixtures, plus sentinels: 0, NULL, and a site in no tree.
 const siteIds = [1001, 1002, 1003, 2001, 0, null, 4242];
 const orgIds = [812, 900, 0, null];
 
 beforeAll(async () => {
-  ds = createTestDataSource([Site, WorkOrder, Reading]);
+  ds = createTestDataSource([Site, WorkOrder, Reading, Member]);
   await ds.initialize();
   await ds.getRepository(Site).save(
     [1001, 1002, 1003, 2001, 4242].map((id) => ({ id, orgId: id === 2001 ? 900 : 812 })),
@@ -43,7 +49,8 @@ beforeAll(async () => {
   }
   await ds.getRepository(WorkOrder).save(orders, { chunk: 200 });
   await ds.getRepository(Reading).save(siteIds.map((siteId, i) => ({ id: i + 1, siteId })));
-  for (const name of ['Site', 'WorkOrder', 'Reading'] as const) {
+  await ds.getRepository(Member).save(['alice', 'bob', 'carol', 'dave', null].map((userId, i) => ({ id: i + 1, userId })));
+  for (const name of names) {
     rows[name] = (await ds.getRepository(entities[name] as never).find({ order: { id: 'ASC' } })) as never;
   }
   authz = await Authz.create<User>({ grants: 'snapshot', policies, subjects, now: () => NOW, logger: false });
@@ -60,9 +67,9 @@ describe(`scoped parity on ${DB}: scopeQuery rows === rows where ability.can`, (
     it(userId, async () => {
       const mismatches: string[] = [];
       for (const domain of domains) {
-        const ability = await authz.abilityFor({ id: userId }, { domain, snapshot: snapshotFor(userId) });
+        const ability = await authz.abilityFor({ id: userId }, { domain, snapshot: snapshotFor(userId, domain) });
         for (const action of actions) {
-          for (const name of ['Site', 'WorkOrder', 'Reading'] as const) {
+          for (const name of names) {
             const expected = ids(rows[name].filter((row) => ability.can(action, row)));
             const qb = ds.getRepository(entities[name] as never).createQueryBuilder('x') as SelectQueryBuilder<ObjectLiteral>;
             scopeQuery(qb, ability, action, entities[name]);
