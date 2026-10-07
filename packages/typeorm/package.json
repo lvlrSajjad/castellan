@@ -1,6 +1,6 @@
 {
   "name": "@castellanjs/typeorm",
-  "version": "0.1.0-alpha.1",
+  "version": "0.1.0-alpha.2",
   "description": "TypeORM policy storage and query scoping (accessibleBy) for castellan.",
   "license": "MIT",
   "author": "Sadjad Asadi",

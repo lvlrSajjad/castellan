@@ -1,6 +1,6 @@
 {
   "name": "@castellanjs/nestjs",
-  "version": "0.1.0-alpha.1",
+  "version": "0.1.0-alpha.2",
   "description": "NestJS module, guard and decorators for castellan (CASL-style abilities on Apache Casbin).",
   "license": "MIT",
   "author": "Sadjad Asadi",

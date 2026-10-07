@@ -1,6 +1,6 @@
 {
   "name": "@castellanjs/core",
-  "version": "0.1.0-alpha.1",
+  "version": "0.1.0-alpha.2",
   "description": "CASL-style abilities compiled to Apache Casbin (incubating) policies: typed RBAC + ABAC with one source of truth.",
   "license": "MIT",
   "author": "Sadjad Asadi",
