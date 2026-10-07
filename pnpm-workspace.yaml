@@ -3,6 +3,8 @@ packages:
   - examples/*
 
 allowBuilds:
+  # NestJS 10's postinstall only prints a funding message.
+  '@nestjs/core': false
   esbuild: true
   better-sqlite3: true
   '@swc/core': true

@@ -32,7 +32,7 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm build
-      - name: Pack (rewrites workspace: ranges and publishConfig)
+      - name: "Pack (rewrites workspace: ranges and publishConfig)"
         run: pnpm pack:all
       - name: Check the tag matches the package versions
         run: |
