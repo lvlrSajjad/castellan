@@ -1,0 +1,56 @@
+name: Release
+
+# Publishes the three packages to npm when a version tag is pushed, using npm trusted publishing
+# (GitHub OIDC): no npm token is stored in the repo, and provenance is attached automatically.
+# Prereleases (versions with a "-", e.g. 0.1.0-alpha.1) go to the `next` dist-tag, others to `latest`.
+#
+# Each package must be linked once on npmjs.com → package settings → Trusted publisher:
+#   GitHub user `lvlrSajjad`, repository `castellan`, workflow `release.yml`.
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write # attach tarballs to the GitHub release
+  id-token: write # OIDC token for npm trusted publishing
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+      - name: npm with trusted publishing support (>= 11.5.1)
+        run: npm install -g npm@latest
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm build
+      - name: Pack (rewrites workspace: ranges and publishConfig)
+        run: pnpm pack:all
+      - name: Check the tag matches the package versions
+        run: |
+          for p in core typeorm nestjs; do
+            v=$(node -p "require('./packages/$p/package.json').version")
+            [ "v$v" = "$GITHUB_REF_NAME" ] || { echo "packages/$p is $v but the tag is $GITHUB_REF_NAME"; exit 1; }
+          done
+      - name: Publish to npm
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          tag=latest; case "$version" in *-*) tag=next ;; esac
+          for p in core typeorm nestjs; do
+            npm publish "dist-packs/castellan-$p-$version.tgz" --access public --tag "$tag"
+          done
+      - name: Attach tarballs to the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          prerelease=""; case "$GITHUB_REF_NAME" in *-*) prerelease="--prerelease" ;; esac
+          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 || gh release create "$GITHUB_REF_NAME" $prerelease --title "$GITHUB_REF_NAME" --notes "See the package CHANGELOGs."
+          gh release upload "$GITHUB_REF_NAME" dist-packs/*.tgz --clobber
