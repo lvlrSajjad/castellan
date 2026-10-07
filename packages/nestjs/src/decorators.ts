@@ -1,4 +1,4 @@
-import type { SubjectType } from '@castellan/core';
+import type { SubjectType } from '@castellanjs/core';
 import { type ExecutionContext, createParamDecorator } from '@nestjs/common';
 import type { ModuleRef } from '@nestjs/core';
 import { CHECK_ABILITY_METADATA, REQUEST_ABILITY } from './constants.js';

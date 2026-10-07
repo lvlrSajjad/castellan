@@ -1,6 +1,6 @@
 import 'reflect-metadata';
-import { type Ability, definePolicies } from '@castellan/core';
-import { CastellanRule, createTypeormAdapter, scopeQuery } from '@castellan/typeorm';
+import { type Ability, definePolicies } from '@castellanjs/core';
+import { CastellanRule, createTypeormAdapter, scopeQuery } from '@castellanjs/typeorm';
 import {
   type CanActivate,
   Controller,

@@ -1,5 +1,5 @@
-import { CastellanRule, createTypeormAdapter } from '@castellan/typeorm';
-import { AuthzModule } from '@castellan/nestjs';
+import { CastellanRule, createTypeormAdapter } from '@castellanjs/typeorm';
+import { AuthzModule } from '@castellanjs/nestjs';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';

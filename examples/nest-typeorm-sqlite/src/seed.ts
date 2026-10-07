@@ -1,4 +1,4 @@
-import { AuthzService } from '@castellan/nestjs';
+import { AuthzService } from '@castellanjs/nestjs';
 import { Injectable, type OnApplicationBootstrap } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { Organization, Site, WorkOrder } from './entities/index.js';

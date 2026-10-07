@@ -21,7 +21,7 @@ import { type DetectSubjectType, type SubjectType, resolveSubject } from './subj
 export type SyncMode = 'replace' | 'merge' | 'dry-run' | 'off';
 
 export interface AuthzOptions<U> {
-  /** Casbin adapter for policy storage (e.g. from `@castellan/typeorm`). Omit for in-memory. */
+  /** Casbin adapter for policy storage (e.g. from `@castellanjs/typeorm`). Omit for in-memory. */
   adapter?: Adapter;
   /** Multi-tenant mode: every check needs a domain. Default `true`. */
   domains?: boolean;

@@ -4,7 +4,7 @@ import {
   type ResolvedNode,
   type SubjectType,
   assertResolvedScope,
-} from '@castellan/core';
+} from '@castellanjs/core';
 import {
   And,
   Equal,

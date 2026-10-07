@@ -1,4 +1,4 @@
-# @castellan/core
+# @castellanjs/core
 
 CASL-style abilities compiled to Apache Casbin (incubating) policies: typed RBAC + ABAC with one source of truth.
 

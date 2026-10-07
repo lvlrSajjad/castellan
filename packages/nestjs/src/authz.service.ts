@@ -9,7 +9,7 @@ import {
   type SubjectType,
   type SyncMode,
   type SyncReport,
-} from '@castellan/core';
+} from '@castellanjs/core';
 import { Inject, Injectable } from '@nestjs/common';
 import { AUTHZ_INSTANCE, AUTHZ_MODULE_OPTIONS, REQUEST_ABILITY } from './constants.js';
 import { AuthzForbiddenException } from './exceptions.js';

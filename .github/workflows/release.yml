@@ -45,7 +45,11 @@ jobs:
           version="${GITHUB_REF_NAME#v}"
           tag=latest; case "$version" in *-*) tag=next ;; esac
           for p in core typeorm nestjs; do
-            npm publish "dist-packs/castellan-$p-$version.tgz" --access public --tag "$tag"
+            if npm view "@castellanjs/$p@$version" version >/dev/null 2>&1; then
+              echo "@castellanjs/$p@$version is already on npm; skipping"
+              continue
+            fi
+            npm publish "./dist-packs/castellanjs-$p-$version.tgz" --access public --tag "$tag"
           done
       - name: Attach tarballs to the GitHub release
         env:

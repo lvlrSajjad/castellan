@@ -6,7 +6,7 @@ import {
   type ResolvedScope,
   type SubjectType,
   assertResolvedScope,
-} from '@castellan/core';
+} from '@castellanjs/core';
 import { Brackets, type EntityMetadata, type ObjectLiteral, type SelectQueryBuilder } from 'typeorm';
 
 export interface ApplyScopeOptions {

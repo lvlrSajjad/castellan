@@ -1,6 +1,6 @@
 {
-  "name": "@castellan/typeorm",
-  "version": "0.1.0-alpha.0",
+  "name": "@castellanjs/typeorm",
+  "version": "0.1.0-alpha.1",
   "description": "TypeORM policy storage and query scoping (accessibleBy) for castellan.",
   "license": "MIT",
   "author": "Sadjad Asadi",
@@ -69,7 +69,7 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
-    "@castellan/core": "workspace:*",
+    "@castellanjs/core": "workspace:*",
     "@types/better-sqlite3": "^9.6.0",
     "@types/pg": "^8.23.1",
     "better-sqlite3": "^12.11.1",
@@ -80,7 +80,7 @@
     "typeorm": "^1.1.1"
   },
   "peerDependencies": {
-    "@castellan/core": "workspace:^",
+    "@castellanjs/core": "workspace:^",
     "casbin": "^5.27.0",
     "typeorm": "^0.3.20 || ^1.0.0"
   }

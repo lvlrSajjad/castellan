@@ -1,4 +1,4 @@
-import { definePolicies } from '@castellan/core';
+import { definePolicies } from '@castellanjs/core';
 import { Site, WorkOrder } from './entities/index.js';
 import type { AppAction, AppUser } from './users.js';
 

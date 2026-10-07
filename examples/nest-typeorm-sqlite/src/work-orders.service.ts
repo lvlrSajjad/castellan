@@ -1,5 +1,5 @@
-import { type Ability } from '@castellan/core';
-import { scopeQuery } from '@castellan/typeorm';
+import { type Ability } from '@castellanjs/core';
+import { scopeQuery } from '@castellanjs/typeorm';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';

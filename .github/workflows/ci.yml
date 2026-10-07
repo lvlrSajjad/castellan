@@ -62,9 +62,9 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Use TypeORM 0.3
         if: matrix.typeorm == '0.3'
-        run: pnpm --filter @castellan/typeorm add -D typeorm@^0.3 better-sqlite3@^11
+        run: pnpm --filter @castellanjs/typeorm add -D typeorm@^0.3 better-sqlite3@^11
       - name: Both parity suites (store-backed and scoped)
-        run: pnpm --filter @castellan/typeorm test
+        run: pnpm --filter @castellanjs/typeorm test
         env:
           CASTELLAN_PG_URL: ${{ matrix.db == 'postgres' && 'postgres://postgres:castellan@localhost:5432/castellan' || '' }}
           CASTELLAN_MYSQL_URL: ${{ matrix.db == 'mysql' && 'mysql://root:castellan@127.0.0.1:3306/castellan' || '' }}
@@ -82,7 +82,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Downgrade to NestJS 10 / TypeORM 0.3
         run: |
-          pnpm --filter @castellan/typeorm add -D typeorm@^0.3 better-sqlite3@^11
-          pnpm --filter @castellan/nestjs add -D @nestjs/common@^10 @nestjs/core@^10 @nestjs/testing@^10 @nestjs/platform-express@^10 @nestjs/typeorm@^10 typeorm@^0.3 better-sqlite3@^11
-      - run: pnpm --filter @castellan/typeorm --filter @castellan/nestjs test
-      - run: pnpm --filter @castellan/typeorm --filter @castellan/nestjs typecheck
+          pnpm --filter @castellanjs/typeorm add -D typeorm@^0.3 better-sqlite3@^11
+          pnpm --filter @castellanjs/nestjs add -D @nestjs/common@^10 @nestjs/core@^10 @nestjs/testing@^10 @nestjs/platform-express@^10 @nestjs/typeorm@^10 typeorm@^0.3 better-sqlite3@^11
+      - run: pnpm --filter @castellanjs/typeorm --filter @castellanjs/nestjs test
+      - run: pnpm --filter @castellanjs/typeorm --filter @castellanjs/nestjs typecheck

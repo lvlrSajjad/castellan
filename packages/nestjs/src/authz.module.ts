@@ -1,4 +1,4 @@
-import { Authz } from '@castellan/core';
+import { Authz } from '@castellanjs/core';
 import { type DynamicModule, Module, type Provider } from '@nestjs/common';
 import { AuthzGuard } from './authz.guard.js';
 import { AuthzService } from './authz.service.js';

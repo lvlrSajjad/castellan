@@ -1,4 +1,4 @@
-# @castellan/typeorm
+# @castellanjs/typeorm
 
 TypeORM policy storage and query scoping (accessibleBy) for castellan.
 

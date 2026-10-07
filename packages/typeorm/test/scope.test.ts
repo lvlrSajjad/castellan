@@ -1,5 +1,5 @@
 import 'reflect-metadata';
-import { Authz, definePolicies } from '@castellan/core';
+import { Authz, definePolicies } from '@castellanjs/core';
 import type { DataSource } from 'typeorm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { CastellanRule, createTypeormAdapter, scopeQuery, toFindOptionsWhere } from '../src/index.js';

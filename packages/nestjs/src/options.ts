@@ -1,4 +1,4 @@
-import type { AuthzOptions } from '@castellan/core';
+import type { AuthzOptions } from '@castellanjs/core';
 import type { ModuleMetadata } from '@nestjs/common';
 
 /** Options for {@link AuthzModule}. Everything from core's `AuthzOptions`, plus request mapping. */

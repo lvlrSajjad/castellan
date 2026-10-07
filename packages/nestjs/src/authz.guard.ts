@@ -1,4 +1,4 @@
-import { type Ability, subjectTypeName } from '@castellan/core';
+import { type Ability, subjectTypeName } from '@castellanjs/core';
 import {
   type CanActivate,
   type ExecutionContext,

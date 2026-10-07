@@ -5,7 +5,7 @@
 ## Decision
 
 - Conditions are stored as JSON in the `cond` column, not as Casbin `eval()` strings.
-- `condMatches()` in `@castellan/core` is the only implementation of condition + field logic.
+- `condMatches()` in `@castellanjs/core` is the only implementation of condition + field logic.
   The in-memory `Ability` calls it directly; the enforcer calls it through the registered
   `condMatch(r.obj, p.cond, p.eft)` function. Both parity suites (ability vs enforcer, ability vs
   SQL) guard this.

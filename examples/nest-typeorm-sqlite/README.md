@@ -2,7 +2,7 @@
 
 A small facility-maintenance API (organizations, sites, work orders) that shows:
 
-- policies written once with `definePolicies` (`src/policies.ts`), synced into Casbin tables via `@castellan/typeorm`
+- policies written once with `definePolicies` (`src/policies.ts`), synced into Casbin tables via `@castellanjs/typeorm`
 - per-organization roles (Casbin domains) assigned at startup with `AuthzService.assignRole` (`src/seed.ts`)
 - `AuthzGuard` + `@CheckAbility` with a `load` function, so rule conditions are checked against the real row (`src/work-orders.controller.ts`)
 - `scopeQuery` turning the same rules into SQL for list endpoints (`src/work-orders.service.ts`)

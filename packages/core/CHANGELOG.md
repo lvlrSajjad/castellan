@@ -1,4 +1,10 @@
-# @castellan/core
+# @castellanjs/core
+
+## 0.1.0-alpha.1
+
+### Patch Changes
+
+- Packages are published as `@castellanjs/*` (the `@castellan` npm scope is not available).
 
 ## 0.1.0-alpha.0
 

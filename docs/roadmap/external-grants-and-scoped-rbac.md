@@ -349,7 +349,7 @@ update() { … }
 
 ### 8. Casbin-free ability and client export (S, core)
 
-- A new entry point, `@castellan/core/ability`, exporting `Ability`, `subject`, conditions and
+- A new entry point, `@castellanjs/core/ability`, exporting `Ability`, `subject`, conditions and
   `resolveScope`, with no `casbin` import. Casbin becomes an optional peer dependency for apps that
   only use the ability on the client.
 - `ability.toJSON()` returns the rules with refs and scopes resolved to literal values, plus
@@ -357,7 +357,7 @@ update() { … }
 - `ability.permissions()` returns `{ key, scopes: string[], sources: string[] }[]`, for a `/me`
   endpoint and an "effective access" screen.
 
-**Done when:** a browser bundle of `@castellan/core/ability` contains no casbin code (size check in CI).
+**Done when:** a browser bundle of `@castellanjs/core/ability` contains no casbin code (size check in CI).
 
 ### 9. Grant-time checks (S, core)
 

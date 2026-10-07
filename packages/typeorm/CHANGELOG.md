@@ -1,4 +1,12 @@
-# @castellan/typeorm
+# @castellanjs/typeorm
+
+## 0.1.0-alpha.1
+
+### Patch Changes
+
+- Packages are published as `@castellanjs/*` (the `@castellan` npm scope is not available).
+- Updated dependencies
+  - @castellanjs/core@0.1.0-alpha.1
 
 ## 0.1.0-alpha.0
 
@@ -11,4 +19,4 @@
 
 - Updated dependencies
 - Updated dependencies [a92fd76]
-  - @castellan/core@0.1.0-alpha.0
+  - @castellanjs/core@0.1.0-alpha.0

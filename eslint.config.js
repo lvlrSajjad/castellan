@@ -19,8 +19,8 @@ export default tseslint.config(
         'error',
         {
           patterns: [
-            { group: ['@nestjs/*'], message: '@castellan/core must not depend on NestJS.' },
-            { group: ['typeorm', 'typeorm/*'], message: '@castellan/core must not depend on TypeORM.' },
+            { group: ['@nestjs/*'], message: '@castellanjs/core must not depend on NestJS.' },
+            { group: ['typeorm', 'typeorm/*'], message: '@castellanjs/core must not depend on TypeORM.' },
           ],
         },
       ],

@@ -14,11 +14,11 @@ everyone.cannot('delete', WorkOrder, { status: 'invoiced' }).because('Invoiced w
 
 | Package | What it does |
 | --- | --- |
-| [`@castellan/core`](packages/core) | DSL, condition engine, in-memory `Ability`, Casbin model + enforcer runtime, policy sync. No framework dependencies. |
-| [`@castellan/typeorm`](packages/typeorm) | Policy storage on your existing `DataSource`, `scopeQuery` (TypeORM `accessibleBy`), `toFindOptionsWhere`. |
-| [`@castellan/nestjs`](packages/nestjs) | `AuthzModule`, `AuthzGuard`, `@CheckAbility`, `@CurrentAbility`, `AuthzService`. |
+| [`@castellanjs/core`](packages/core) | DSL, condition engine, in-memory `Ability`, Casbin model + enforcer runtime, policy sync. No framework dependencies. |
+| [`@castellanjs/typeorm`](packages/typeorm) | Policy storage on your existing `DataSource`, `scopeQuery` (TypeORM `accessibleBy`), `toFindOptionsWhere`. |
+| [`@castellanjs/nestjs`](packages/nestjs) | `AuthzModule`, `AuthzGuard`, `@CheckAbility`, `@CurrentAbility`, `AuthzService`. |
 
-> **Status:** pre-release (0.x). Not on npm yet: install a tagged prerelease, see [docs/INSTALL.md](docs/INSTALL.md).
+> **Status:** pre-release (0.x), published under the `next` dist-tag. See [docs/INSTALL.md](docs/INSTALL.md).
 
 ## Why
 
@@ -36,7 +36,7 @@ everyone.cannot('delete', WorkOrder, { status: 'invoiced' }).because('Invoiced w
 Node.js ≥ 22, `casbin` ^5.27. TypeORM 0.3.20+ or 1.x. NestJS 10, 11 or 12.
 
 ```bash
-pnpm add @castellan/core @castellan/typeorm @castellan/nestjs casbin
+pnpm add @castellanjs/core@next @castellanjs/typeorm@next @castellanjs/nestjs@next casbin
 ```
 
 ## Quick start (NestJS + TypeORM)
@@ -45,7 +45,7 @@ pnpm add @castellan/core @castellan/typeorm @castellan/nestjs casbin
 
 ```ts
 // authz/policies.ts
-import { definePolicies } from '@castellan/core';
+import { definePolicies } from '@castellanjs/core';
 import { Site, WorkOrder } from '../entities';
 
 export interface AppUser { id: string; orgId: string; siteIds: number[] }
@@ -77,8 +77,8 @@ Conditions are type-checked against the entity: `{ assigneId: user.id }` is a co
 ### 2. Register the module
 
 ```ts
-import { CastellanRule, createTypeormAdapter } from '@castellan/typeorm';
-import { AuthzModule } from '@castellan/nestjs';
+import { CastellanRule, createTypeormAdapter } from '@castellanjs/typeorm';
+import { AuthzModule } from '@castellanjs/nestjs';
 
 @Module({
   imports: [
@@ -162,10 +162,10 @@ castellan never silently treats an untagged object as `Object`.
 
 ## Without NestJS
 
-`@castellan/core` works anywhere:
+`@castellanjs/core` works anywhere:
 
 ```ts
-import { Authz } from '@castellan/core';
+import { Authz } from '@castellanjs/core';
 
 const authz = await Authz.create({ adapter, policies });
 await authz.assignRole('u-42', 'site-manager', 'org-1');
@@ -179,7 +179,7 @@ want castellan only for **the rules, the decision and the list filter**, with Ca
 engine. castellan reads the grants and never writes them.
 
 ```ts
-import { Authz, createScopeTree, definePolicies, defineSubjects } from '@castellan/core';
+import { Authz, createScopeTree, definePolicies, defineSubjects } from '@castellanjs/core';
 
 // Rules: a role is a key; composite roles inherit keys.
 export const policies = definePolicies<AppUser>(({ role, everyone }) => {
@@ -235,7 +235,7 @@ snapshot itself.
 ### List filters: resolve, check, apply
 
 ```ts
-import { applyScope } from '@castellan/typeorm';
+import { applyScope } from '@castellanjs/typeorm';
 
 const resolved = ability.resolveScope('read', WorkOrder);
 // { kind: 'none' } or { kind: 'condition', node } with every ref and scope resolved to literals:
@@ -393,8 +393,8 @@ pnpm test          # all packages
 pnpm lint && pnpm typecheck
 pnpm build
 docker compose -f docker-compose.test.yml up -d
-CASTELLAN_PG_URL=postgres://postgres:castellan@localhost:55432/castellan pnpm --filter @castellan/typeorm test
-CASTELLAN_MYSQL_URL=mysql://root:castellan@localhost:53306/castellan pnpm --filter @castellan/typeorm test
+CASTELLAN_PG_URL=postgres://postgres:castellan@localhost:55432/castellan pnpm --filter @castellanjs/typeorm test
+CASTELLAN_MYSQL_URL=mysql://root:castellan@localhost:53306/castellan pnpm --filter @castellanjs/typeorm test
 ```
 
 Design decisions are in [`docs/decisions`](docs/decisions).

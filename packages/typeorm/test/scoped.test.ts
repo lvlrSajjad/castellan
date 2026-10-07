@@ -1,5 +1,5 @@
 import 'reflect-metadata';
-import { Authz, EmptyScopeError, InvalidScopeError, type ResolvedScope, createScopeTree } from '@castellan/core';
+import { Authz, EmptyScopeError, InvalidScopeError, type ResolvedScope, createScopeTree } from '@castellanjs/core';
 import type { DataSource, ObjectLiteral, SelectQueryBuilder } from 'typeorm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {

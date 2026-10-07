@@ -1,5 +1,5 @@
-import { type Ability } from '@castellan/core';
-import { AuthzGuard, CheckAbility, CurrentAbility } from '@castellan/nestjs';
+import { type Ability } from '@castellanjs/core';
+import { AuthzGuard, CheckAbility, CurrentAbility } from '@castellanjs/nestjs';
 import { BadRequestException, Body, Controller, Delete, Get, Param, Patch, Req, UseGuards } from '@nestjs/common';
 import { ModuleRef } from '@nestjs/core';
 import { FakeAuthGuard } from './auth.guard.js';

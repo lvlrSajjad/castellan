@@ -1,4 +1,4 @@
-# @castellan/nestjs
+# @castellanjs/nestjs
 
 NestJS module, guard and decorators for castellan (CASL-style abilities on Apache Casbin).
 

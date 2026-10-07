@@ -9,9 +9,9 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@castellan/core": "workspace:*",
-    "@castellan/nestjs": "workspace:*",
-    "@castellan/typeorm": "workspace:*",
+    "@castellanjs/core": "workspace:*",
+    "@castellanjs/nestjs": "workspace:*",
+    "@castellanjs/typeorm": "workspace:*",
     "@nestjs/common": "^12.1.2",
     "@nestjs/core": "^12.1.2",
     "@nestjs/platform-express": "^12.1.2",

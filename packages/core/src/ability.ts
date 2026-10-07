@@ -172,7 +172,7 @@ export class Ability<A extends string = string> {
   /**
    * Resolves the row filter for `action` on a subject type: `none`, or a condition with every
    * `$ref`, tenant and scope predicate resolved to literal values. Database-agnostic; pass the
-   * result to `applyScope` (`@castellan/typeorm`) or inspect it in tests.
+   * result to `applyScope` (`@castellanjs/typeorm`) or inspect it in tests.
    *
    * In a scoped domain every allowed branch carries the tenant (or leaf) predicate, so the result
    * can never be "all rows".

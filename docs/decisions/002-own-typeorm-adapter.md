@@ -16,7 +16,7 @@
 
 ## Decision
 
-`@castellan/typeorm` ships `TypeormAdapter` (~120 lines) implementing Casbin's `BatchAdapter`
+`@castellanjs/typeorm` ships `TypeormAdapter` (~120 lines) implementing Casbin's `BatchAdapter`
 on an existing `DataSource`:
 
 - Rows are loaded as arrays (`model.addPolicy`), never via CSV.

@@ -2,7 +2,8 @@
 
 **Status:** accepted
 
-- **Package names:** `@castellan/core`, `@castellan/typeorm`, `@castellan/nestjs`. Casbin is an
+- **Package names:** `@castellanjs/core`, `@castellanjs/typeorm`, `@castellanjs/nestjs`. The `@castellan`
+  npm scope belongs to an existing user account, so the scope is `@castellanjs` (an npm org). Casbin is an
   Apache Software Foundation (incubating) trademark, so no `casbin-*` names; docs say
   "built on Apache Casbin (incubating)".
 - **principal vs subject:** Casbin's `sub` is *who*; CASL's `subject` is *what*. castellan uses

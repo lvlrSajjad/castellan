@@ -11,7 +11,7 @@ import { InvalidScopeError, UnresolvedRefError } from './errors.js';
 
 /**
  * A condition tree with every `$ref` and scope resolved to literal values. Database-agnostic:
- * `@castellan/typeorm`'s `applyScope` writes it as SQL; apps can inspect or test it directly.
+ * `@castellanjs/typeorm`'s `applyScope` writes it as SQL; apps can inspect or test it directly.
  */
 export type ResolvedNode =
   | { kind: 'const'; value: boolean }
