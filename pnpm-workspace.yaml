@@ -1,0 +1,8 @@
+packages:
+  - packages/*
+  - examples/*
+
+allowBuilds:
+  esbuild: true
+  better-sqlite3: true
+  '@swc/core': true
