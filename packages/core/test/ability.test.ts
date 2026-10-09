@@ -147,3 +147,30 @@ describe('domains', () => {
     expect((await flat.abilityFor(tech)).can('update', wo({ status: 'closed' }))).toBe(false);
   });
 });
+
+describe('canAll', () => {
+  it('is true only when every subject passes can()', async () => {
+    const ability = await authz.abilityFor(tech, { domain: 'org-1' });
+    expect(ability.canAll('update', [wo({}), wo({})])).toBe(true);
+    expect(ability.canAll('update', [wo({}), wo({ status: 'closed' })])).toBe(false);
+  });
+
+  it('is vacuously true for an empty array', async () => {
+    const ability = await authz.abilityFor(tech, { domain: 'org-1' });
+    expect(ability.canAll('update', [])).toBe(true);
+  });
+});
+
+describe('canAny', () => {
+  it('is true when at least one subject passes can()', async () => {
+    const ability = await authz.abilityFor(tech, { domain: 'org-1' });
+    expect(ability.canAny('update', [wo({}), wo({})])).toBe(true);
+    expect(ability.canAny('update', [wo({ status: 'closed' }), wo({})])).toBe(true);
+    expect(ability.canAny('update', [wo({ status: 'closed' }), wo({ assigneeId: 'someone-else' })])).toBe(false);
+  });
+
+  it('is false for an empty array', async () => {
+    const ability = await authz.abilityFor(tech, { domain: 'org-1' });
+    expect(ability.canAny('update', [])).toBe(false);
+  });
+});
