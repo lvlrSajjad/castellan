@@ -21,6 +21,8 @@ describe('condition evaluation', () => {
     expect(evaluate({ a: { $gt: 1 } }, { a: 2 })).toBe(true);
     expect(evaluate({ a: { $gte: 2, $lt: 3 } }, { a: 2 })).toBe(true);
     expect(evaluate({ a: { $lte: 1 } }, { a: null })).toBe(false);
+    expect(evaluate({ a: { $lte: 2 } }, { a: 2 })).toBe(true);
+    expect(evaluate({ a: { $lte: 2 } }, { a: 3 })).toBe(false);
     expect(evaluate({ a: { $lt: 1 } }, { a: null })).toBe(false);
     expect(evaluate({ a: { $exists: true } }, { a: 0 })).toBe(true);
     expect(evaluate({ a: { $exists: false } }, { a: null })).toBe(true);
