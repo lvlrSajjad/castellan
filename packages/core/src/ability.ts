@@ -143,6 +143,16 @@ export class Ability<A extends string = string> {
     return !this.can(action, subject, field);
   }
 
+  /** True when `action` is allowed on every subject in `subjects` (vacuously true for an empty array). */
+  canAll(action: A | 'manage', subjects: readonly SubjectArg[]): boolean {
+    return subjects.every((subject) => this.can(action, subject));
+  }
+
+  /** True when `action` is allowed on at least one subject in `subjects` (false for an empty array). */
+  canAny(action: A | 'manage', subjects: readonly SubjectArg[]): boolean {
+    return subjects.some((subject) => this.can(action, subject));
+  }
+
   /** The rule that decided the outcome (deny first), e.g. to read its `reason`. */
   relevantRuleFor(action: A | 'manage', subject: SubjectArg, field?: string): Rule | undefined {
     return this.explain(action, subject, field).decidingRule;
